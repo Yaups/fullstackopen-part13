@@ -1,11 +1,15 @@
 const errorHandler = (error, req, res, next) => {
   console.error(error.message)
+  console.error(error.name)
 
   if (error.name === 'SequelizeValidationError')
-    return res.status(400).json({ error: 'Blog post is incorrectly formatted' })
+    return res.status(400).json({ error: 'Post is incorrectly formatted' })
 
   if (error.name === 'TypeError')
-    return res.status(404).json({ error: `Blog does not exist` })
+    return res.status(404).json({ error: 'Cannot find target' })
+
+  if (error.name === 'SequelizeUniqueConstraintError')
+    return res.status(400).json({ error: 'Not unique / already taken' })
 
   next(error)
 }

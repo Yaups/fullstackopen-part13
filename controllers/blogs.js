@@ -6,36 +6,24 @@ router.get('/', async (_req, res) => {
   res.json(blogs)
 })
 
-router.post('/', async (req, res, next) => {
-  try {
-    const blog = await Blog.create(req.body)
-    res.json(blog)
-  } catch (error) {
-    next(error)
-  }
+router.post('/', async (req, res) => {
+  const blog = await Blog.create(req.body)
+  res.status(201).json(blog)
 })
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', async (req, res) => {
   const blog = await Blog.findByPk(req.params.id)
 
-  try {
-    blog.likes = req.body.likes
-    await blog.save()
-    res.json({ likes: req.body.likes })
-  } catch (error) {
-    next(error)
-  }
+  blog.likes = req.body.likes
+  await blog.save()
+  res.json({ likes: req.body.likes })
 })
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', async (req, res) => {
   const blog = await Blog.findByPk(req.params.id)
 
-  try {
-    await blog.destroy()
-    res.status(204).end()
-  } catch (error) {
-    next(error)
-  }
+  await blog.destroy()
+  res.status(204).end()
 })
 
 module.exports = router
