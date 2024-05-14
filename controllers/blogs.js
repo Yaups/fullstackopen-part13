@@ -1,13 +1,30 @@
 const router = require('express').Router()
-const { Blog } = require('../models')
+const { Blog, User } = require('../models')
+const { tokenExtractor } = require('../util/middleware')
 
 router.get('/', async (_req, res) => {
-  const blogs = await Blog.findAll()
+  const blogs = await Blog.findAll({
+    attributes: { exclude: ['userId'] },
+    include: {
+      model: User,
+      attributes: ['name'],
+    },
+  })
   res.json(blogs)
 })
 
-router.post('/', async (req, res) => {
-  const blog = await Blog.create(req.body)
+router.post('/', tokenExtractor, async (req, res) => {
+  const user = await User.findByPk(req.decodedToken.id)
+
+  if (!user) {
+    return res.status(401).json({
+      error: 'Authorization error: you must be logged in to post a blog',
+    })
+  }
+
+  const blogToPost = { ...req.body, userId: user.id }
+
+  const blog = await Blog.create(blogToPost)
   res.status(201).json(blog)
 })
 
@@ -19,8 +36,24 @@ router.put('/:id', async (req, res) => {
   res.json({ likes: req.body.likes })
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', tokenExtractor, async (req, res) => {
+  const user = await User.findByPk(req.decodedToken.id)
+
+  if (!user) {
+    return res
+      .status(401)
+      .json({ error: 'Authorization error: you are not logged in' })
+  }
+
   const blog = await Blog.findByPk(req.params.id)
+
+  if (!blog) {
+    return res.status(400).json({ error: 'Cannot find blog to delete' })
+  }
+
+  if (user.id !== blog.userId) {
+    return res.status(401).json({ error: 'You are not the blog poster' })
+  }
 
   await blog.destroy()
   res.status(204).end()

@@ -1,19 +1,32 @@
 const router = require('express').Router()
 const { User } = require('../models')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const { SECRET } = require('../util/config')
 
 router.post('/', async (req, res) => {
-  const user = await User.findOne({ username: req.body.username })
+  const user = await User.findOne({ where: { username: req.body.username } })
 
-  //use bcrypt to encrypt the password in request
-  const passwordHash = req.body.password.toLowercase()
-
-  if (passwordHash === user.passwordHash) {
-    //use jsonwebtoken to generate a token for their session
-    const token = jwt.tokenify(user.username, user.name, user.userId)
-    return res.json(token)
+  if (!req.body.password) {
+    return res.status(400).json({ error: 'No password specified' })
   }
 
-  res.status(400).end()
+  const passwordCheckSuccessful = user
+    ? await bcrypt.compare(req.body.password, user.passwordHash)
+    : false
+
+  if (!passwordCheckSuccessful) {
+    return res.status(401).json({ error: 'Invalid username or password' })
+  }
+
+  const tokenInfo = {
+    username: user.username,
+    id: user.id,
+  }
+
+  const token = jwt.sign(tokenInfo, SECRET)
+
+  res.status(200).send({ token, username: user.username, name: user.name })
 })
 
 module.exports = router
