@@ -13,21 +13,16 @@ module.exports = {
     })
     await queryInterface.createTable('users', {
       id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      username: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-        unique: true,
-        validate: { isEmail: true },
-      },
+      username: { type: DataTypes.TEXT, allowNull: false, unique: true },
       name: { type: DataTypes.TEXT, allowNull: false },
-      passwordHash: { type: DataTypes.TEXT, allowNull: false },
+      password_hash: { type: DataTypes.TEXT, allowNull: false },
       created_at: { type: DataTypes.DATE, allowNull: false },
       updated_at: { type: DataTypes.DATE, allowNull: false },
     })
     await queryInterface.addColumn('blogs', 'user_id', {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'blogs', key: 'id' },
+      references: { model: 'users', key: 'id' },
     })
   },
   down: async ({ context: queryInterface }) => {
