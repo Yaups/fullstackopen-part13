@@ -25,6 +25,17 @@ router.get('/', async (req, res) => {
   res.json(blogs)
 })
 
+router.get('/:id', async (req, res) => {
+  const blog = await Blog.findByPk(req.params.id, {
+    attributes: { exclude: ['userId'] },
+    include: {
+      model: User,
+      attributes: ['name'],
+    },
+  })
+  res.json(blog)
+})
+
 router.post('/', tokenExtractor, async (req, res) => {
   const user = await User.findByPk(req.decodedToken.id)
 
