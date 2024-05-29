@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const { User } = require('../models')
+const { User, ActiveSession } = require('../models')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { SECRET } = require('../util/config')
@@ -19,12 +19,21 @@ router.post('/', async (req, res) => {
     return res.status(401).json({ error: 'Invalid username or password' })
   }
 
+  if (user.disabled) {
+    return res.status(401).json({ error: 'Account is banned' })
+  }
+
   const tokenInfo = {
     username: user.username,
     id: user.id,
   }
 
   const token = jwt.sign(tokenInfo, SECRET)
+
+  await ActiveSession.create({
+    token,
+    userId: user.id,
+  })
 
   res.status(200).send({ token, username: user.username, name: user.name })
 })

@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const { User, Blog } = require('../models')
+const { tokenExtractor } = require('../util/middleware')
 const bcrypt = require('bcrypt')
 
 router.get('/', async (_req, res) => {
@@ -56,8 +57,14 @@ router.post('/', async (req, res) => {
   })
 })
 
-router.put('/:username', async (req, res) => {
+router.put('/:username', tokenExtractor, async (req, res) => {
   const user = await User.findOne({ where: { username: req.params.username } })
+
+  if (user.id !== req.decodedToken.id) {
+    return res.status(401).json({
+      error: 'You must be logged in as the account owner to change username',
+    })
+  }
 
   if (!req.body.password) {
     return response.status(400).json({ error: 'No password specified' })
@@ -69,18 +76,14 @@ router.put('/:username', async (req, res) => {
 
   if (!(user && passwordCorrect)) {
     return res.status(401).json({
-      error: 'Invalid username or password',
+      error: 'Invalid password',
     })
   }
 
   user.username = req.body.newUsername
-  const updatedUser = await user.save()
+  await user.save()
 
-  res.status(200).json({
-    name: updatedUser.name,
-    username: updatedUser.username,
-    createdAt: updatedUser.createdAt,
-  })
+  res.status(204).end()
 })
 
 module.exports = router

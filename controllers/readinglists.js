@@ -1,8 +1,14 @@
 const router = require('express').Router()
-const { SavedBlogs, User } = require('../models')
+const { SavedBlogs } = require('../models')
 const { tokenExtractor } = require('../util/middleware')
 
-router.post('/', async (req, res) => {
+router.post('/', tokenExtractor, async (req, res) => {
+  if (req.decodedToken.id !== req.body.userId) {
+    return res
+      .status(401)
+      .json({ error: 'You are not the owner of this reading list!' })
+  }
+
   const readingListAddition = await SavedBlogs.create(req.body)
 
   res.status(201).send(readingListAddition)

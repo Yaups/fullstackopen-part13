@@ -1,10 +1,28 @@
 const jwt = require('jsonwebtoken')
 const { SECRET } = require('./config')
+const { User, ActiveSession } = require('../models')
 
-const tokenExtractor = (req, res, next) => {
+const tokenExtractor = async (req, res, next) => {
   const authorization = req.get('authorization')
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
-    req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
+    const token = authorization.substring(7)
+
+    const activeSession = await ActiveSession.findOne({ where: { token } })
+    if (!activeSession) {
+      return res
+        .status(401)
+        .json({ error: 'Session expired: please log back in.' })
+    }
+
+    const decodedToken = jwt.verify(token, SECRET)
+
+    const user = await User.findByPk(decodedToken.id)
+    if (user.disabled) {
+      return res.status(401).json({ error: 'Account is banned' })
+    }
+
+    req.token = token
+    req.decodedToken = decodedToken
   } else {
     return res
       .status(401)
@@ -40,8 +58,14 @@ const errorHandler = (error, _req, res, next) => {
   if (error.name === 'SequelizeDatabaseError')
     return res.status(400).json({
       error:
-        'Error when searching database: trying to search for something impossible',
+        'Trying to use something which cannot exist or is the wrong data type.',
     })
+
+  if (error.name === 'SequelizeForeignKeyConstraintError') {
+    return res
+      .status(400)
+      .json({ error: 'Trying to locate an item which does not exist' })
+  }
 
   next(error)
 }
